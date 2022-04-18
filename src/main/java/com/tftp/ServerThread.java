@@ -1,6 +1,7 @@
 package com.tftp;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.Socket;
 import java.util.Optional;
 
@@ -30,7 +31,7 @@ public class ServerThread extends Thread {
 
             String line = "";
             //Welcome message and command menu.
-            String welcomeMessage = "Connected  \n" +
+            String welcomeMessage = "Connected to TCP Server  \n" +
                     "Menu : \n" +
                     "1: Store file \n" +
                     "2: Retrieve file";
@@ -62,7 +63,8 @@ public class ServerThread extends Thread {
                         String fileName = in.readUTF();
                         //tell the client to send the file
                         out.writeUTF("sending...");
-                        Thread.sleep(100);
+                        Thread.sleep(0);
+
                         //save the file
                         File file = new File(dbFolder + fileName);
                         System.out.println("saving file  " + line);
@@ -74,13 +76,28 @@ public class ServerThread extends Thread {
                         } else {
                             response = "File not save";
                             //out.write((output + "\r\n").getBytes());
-
                         }
                         out.flush();
 
                         break;
                     case "2":
-                        System.out.println("Retrieving file");
+                        String outr = "Enter file name";
+                        out.writeUTF(outr);
+                        Thread.sleep(00);
+
+                        String fName = in.readUTF();
+                        System.out.println("fName "+ fName);
+
+                        File fileRetrieved = new File(dbFolder+fName);
+                        if (!fileRetrieved.exists()) {
+                            System.out.println("File does not exist");
+                            out.writeUTF("File does not exit");
+
+                        } else {
+                            System.out.println("File present");
+                           out.writeUTF("downloading...");
+                            sendFile(dbFolder+fName, out);
+                        }
 
                         break;
                     case "quit":
@@ -92,7 +109,6 @@ public class ServerThread extends Thread {
                         //System.out.println("Command not understood. Type help");
                 }
                 System.out.println("<<<Writing buffer>>>");
-
                 out.writeUTF(response);
                 out.flush();
 
@@ -108,6 +124,41 @@ public class ServerThread extends Thread {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void sendFile(String fileName, DataOutputStream os ) {
+        //track the time taken and the number of bytes sent to print at the end if all goes well
+        long startTime = System.currentTimeMillis();
+        int bytesSent = 0;
+
+        //allocate a buffer for sending data - might as well make this 512 bytes, like the data packets in TFTP
+        byte[] buffer = new byte[1026];
+
+        //open an input stream to the file
+        try (FileInputStream reader = new FileInputStream(fileName)) {
+            int num;
+            try {
+                //keep on writing to the output stream until the end of the file is reached
+                while ((num = reader.read(buffer)) != -1) {
+                    System.out.println("writing");
+                    os.write(buffer, 0, num);
+                    bytesSent += num;
+                }
+            } catch (IOException e) {
+                System.out.println("error sending file: " + e.getMessage());
+                return;
+            }
+        } catch (IOException e) {
+            System.out.println("error reading from file: " + e.getMessage());
+            return;
+        }
+
+        //print information about the transfer, and finish
+        long time = System.currentTimeMillis() - startTime;
+        double seconds = (double) time / 1000.0;
+        BigDecimal bigDecimal = new BigDecimal(seconds);
+        bigDecimal = bigDecimal.setScale(1, BigDecimal.ROUND_UP);
+        System.out.printf("sent %d bytes in %s seconds%n", bytesSent, bigDecimal.toPlainString());
     }
 
     public static String readToEnd(DataInputStream in) throws IOException {
@@ -197,6 +248,7 @@ public class ServerThread extends Thread {
                         break;
                     }else{
                         System.out.println(" stream "+ read);
+
                     }
                 }
                 System.out.println("file released!");

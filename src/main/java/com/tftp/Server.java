@@ -1,6 +1,5 @@
 package com.tftp;
 
-import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -17,7 +16,7 @@ public class Server {
         // starts server and waits for a connection
         try {
             server = new ServerSocket(port);
-            System.out.println(" Server started "+ server.getLocalSocketAddress());
+            System.out.println(" TCP Server started "+ server.getLocalSocketAddress());
 
             while (true) {
                 try {
